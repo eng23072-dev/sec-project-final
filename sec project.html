@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Literary Quote Explorer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind theme for a literary/book feel -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'parchment': '#f7f0e0',
+                        'ink': '#382b24',
+                        'sepia': '#a8947f',
+                        'accent-gold': '#d4af37',
+                        'deep-red': '#8b0000',
+                        'green-success': '#4caf50',
+                    },
+                    fontFamily: {
+                        sans: ['Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for a subtle page transition and quote animation */
+        .quote-card {
+            transition: all 0.5s ease-in-out;
+            transform: scale(1);
+        }
+        .quote-card.fade-out {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        /* Style for the warning message when no quotes are found */
+        .warning-text {
+            color: var(--tw-colors-deep-red);
+        }
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background-color: rgba(56, 43, 36, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        /* Custom scrollbar for better aesthetics */
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background-color: #a8947f;
+            border-radius: 4px;
+        }
+        .scrollable-content::-webkit-scrollbar-track {
+            background-color: #f7f0e0;
+        }
+    </style>
+</head>
+<body class="bg-sepia min-h-screen p-4 sm:p-8 flex items-center justify-center font-sans">
+
+    <!-- Main Content Card -->
+    <div class="w-full max-w-3xl bg-parchment rounded-xl shadow-2xl p-6 sm:p-10 border-4 border-accent-gold/50">
+
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-ink mb-2 border-b-2 border-ink/20 pb-2">
+                User-Extended Literary Insight Engine
+            </h1>
+            <p class="text-md text-sepia">Filter, search, and contribute your own profound literary observations.</p>
+        </header>
+
+        <!-- Filter and Search Controls -->
+        <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-1">
+                <label for="theme-filter" class="block text-sm font-medium text-ink mb-1">Filter by Theme:</label>
+                <select id="theme-filter"
+                    class="w-full p-2 border-2 border-sepia rounded-lg focus:ring-accent-gold focus:border-accent-gold bg-white text-ink shadow-sm">
+                    <option value="all">All Themes</option>
+                    <!-- Options populated by JavaScript -->
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label for="search-input" class="block text-sm font-medium text-ink mb-1">Search (Keyword or Author):</label>
+                <input type="text" id="search-input" placeholder="e.g., time, war, or Shakespeare"
+                    class="w-full p-2 border-2 border-sepia rounded-lg focus:ring-accent-gold focus:border-accent-gold bg-white text-ink shadow-sm">
+            </div>
+        </div>
+
+        <!-- Quote Display Area -->
+        <div id="quote-card" class="quote-card bg-parchment p-6 rounded-lg shadow-inner mb-8 transition-opacity duration-500 min-h-36 flex flex-col justify-center">
+            <p id="quote-text" class="text-2xl italic text-ink leading-relaxed mb-4 text-center">
+                <!-- Initial content will be set by JS -->
+            </p>
+            <p id="quote-source" class="text-lg font-semibold text-accent-gold text-right border-t pt-2 border-ink/10">
+                <!-- Initial content will be set by JS -->
+            </p>
+        </div>
+
+        <!-- Button and Quote Count -->
+        <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <button id="new-quote-btn"
+                class="px-6 py-3 text-md font-bold text-parchment bg-ink rounded-full shadow-lg transition-all duration-300 w-full sm:w-auto
+                       hover:bg-sepia hover:text-parchment hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-accent-gold/50
+                       active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                Show Next Quote
+            </button>
+            <button id="add-quote-btn"
+                class="px-6 py-3 text-md font-bold text-ink bg-accent-gold rounded-full shadow-lg transition-all duration-300 w-full sm:w-auto
+                       hover:bg-accent-gold/80 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-ink/50
+                       active:scale-95">
+                + Add Your Quote
+            </button>
+            <p id="quote-count" class="text-sm font-medium text-ink">
+                Available Quotes: <span class="font-bold text-accent-gold" id="available-count">0</span>
+            </p>
+        </div>
+
+        <footer class="mt-8 text-center text-sm text-sepia/80 pt-4 border-t border-ink/10">
+            <p>Project for Literature Subject: Advanced Filtering & User Persistence</p>
+        </footer>
+    </div>
+
+    <!-- ADD QUOTE MODAL (Hidden by default) -->
+    <div id="add-quote-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-parchment rounded-xl shadow-2xl w-full max-w-lg p-6 sm:p-8 relative">
+            <h2 class="text-2xl font-bold text-ink mb-4 border-b pb-2 border-sepia">Contribute a Quote</h2>
+
+            <form id="quote-form">
+                <div class="mb-4">
+                    <label for="quote-input" class="block text-sm font-medium text-ink mb-1">Quote Text (Required):</label>
+                    <textarea id="quote-input" rows="3" required
+                        class="w-full p-2 border-2 border-sepia rounded-lg focus:ring-accent-gold focus:border-accent-gold bg-white text-ink shadow-sm"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label for="source-input" class="block text-sm font-medium text-ink mb-1">Source (Author, Work):</label>
+                    <input type="text" id="source-input" placeholder="e.g., William Shakespeare, Hamlet" required
+                        class="w-full p-2 border-2 border-sepia rounded-lg focus:ring-accent-gold focus:border-accent-gold bg-white text-ink shadow-sm">
+                </div>
+                <div class="mb-6">
+                    <label for="theme-submit-input" class="block text-sm font-medium text-ink mb-1">Theme (e.g., Love, Death):</label>
+                    <input type="text" id="theme-submit-input" placeholder="e.g., Death" required
+                        class="w-full p-2 border-2 border-sepia rounded-lg focus:ring-accent-gold focus:border-accent-gold bg-white text-ink shadow-sm">
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="close-modal-btn"
+                        class="px-4 py-2 text-ink bg-sepia rounded-full hover:bg-sepia/80 transition duration-150">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 text-parchment bg-green-success rounded-full hover:bg-green-success/80 transition duration-150">
+                        Submit Quote
+                    </button>
+                </div>
+            </form>
+            <div id="status-message" class="mt-4 text-center text-sm font-medium hidden"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // CORE DATA - Starting literary quotes
+        const initialLiteraryQuotes = [
+            {
+                text: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+                source: "Jane Austen, Pride and Prejudice",
+                theme: "Society"
+            },
+            {
+                text: "All happy families are alike; each unhappy family is unhappy in its own way.",
+                source: "Leo Tolstoy, Anna Karenina",
+                theme: "Family"
+            },
+            {
+                text: "Call me Ishmael.",
+                source: "Herman Melville, Moby Dick",
+                theme: "Identity"
+            },
+            {
+                text: "The past is a foreign country: they do things differently there.",
+                source: "L. P. Hartley, The Go-Between",
+                theme: "Time"
+            },
+            {
+                text: "We are all in the gutter, but some of us are looking at the stars.",
+                source: "Oscar Wilde, Lady Windermere's Fan",
+                theme: "Hope"
+            },
+        ];
+        
+        // GLOBAL STATE
+        let allLiteraryQuotes = [...initialLiteraryQuotes];
+        let currentFilteredQuotes = [];
+        let lastQuoteIndex = -1; 
+        const STORAGE_KEY = 'literaryQuotesCustom'; // Key for local storage
+
+        // DOM element references
+        const quoteTextElement = document.getElementById('quote-text');
+        const quoteSourceElement = document.getElementById('quote-source');
+        const newQuoteButton = document.getElementById('new-quote-btn');
+        const quoteCard = document.getElementById('quote-card');
+        const themeFilter = document.getElementById('theme-filter');
+        const searchInput = document.getElementById('search-input');
+        const availableCountElement = document.getElementById('available-count');
+        
+        // Modal references
+        const addQuoteModal = document.getElementById('add-quote-modal');
+        const addQuoteButton = document.getElementById('add-quote-btn');
+        const closeModalButton = document.getElementById('close-modal-btn');
+        const quoteForm = document.getElementById('quote-form');
+        const statusMessage = document.getElementById('status-message');
+
+
+        // --- LOCAL STORAGE FUNCTIONS ---
+
+        /**
+         * Loads user-submitted quotes from localStorage and merges them with initial quotes.
+         */
+        function loadUserQuotes() {
+            try {
+                const storedQuotes = localStorage.getItem(STORAGE_KEY);
+                if (storedQuotes) {
+                    const userQuotes = JSON.parse(storedQuotes);
+                    allLiteraryQuotes = [...initialLiteraryQuotes, ...userQuotes];
+                }
+            } catch (e) {
+                console.error("Error loading quotes from local storage:", e);
+                // Fallback to initial quotes if storage fails
+                allLiteraryQuotes = [...initialLiteraryQuotes];
+            }
+        }
+
+        /**
+         * Saves the current set of user-submitted quotes back to localStorage.
+         * Note: Only saves quotes that were NOT in the initial list.
+         */
+        function saveUserQuote(newQuote) {
+            try {
+                // Find existing user quotes (anything not in the initial set)
+                const userQuotes = allLiteraryQuotes.filter(q => !initialLiteraryQuotes.includes(q));
+                
+                // Add the new quote to the global list and user quotes list
+                allLiteraryQuotes.push(newQuote);
+                userQuotes.push(newQuote);
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(userQuotes));
+            } catch (e) {
+                console.error("Error saving quote to local storage:", e);
+                showStatusMessage("Could not save quote locally.", 'deep-red');
+            }
+        }
+
+        // --- UI POPULATION & FILTERING ---
+
+        /**
+         * Fills the theme dropdown based on the unique themes in the quote data.
+         */
+        function populateThemeFilter() {
+            // Get unique, sorted themes from the combined list
+            const themes = [...new Set(allLiteraryQuotes.map(q => q.theme))].sort((a, b) => a.localeCompare(b));
+            
+            // Clear existing options (except 'All Themes')
+            while (themeFilter.options.length > 1) {
+                themeFilter.remove(1);
+            }
+
+            themes.forEach(theme => {
+                const option = document.createElement('option');
+                option.value = theme.toLowerCase();
+                option.textContent = theme;
+                themeFilter.appendChild(option);
+            });
+        }
+
+        /**
+         * Filters the master quote list based on current selection and search input.
+         * Updates the currentFilteredQuotes array.
+         */
+        function filterQuotes() {
+            const selectedTheme = themeFilter.value;
+            const searchTerm = searchInput.value.toLowerCase().trim();
+
+            currentFilteredQuotes = allLiteraryQuotes.filter(quote => {
+                // Theme Match Check
+                const themeMatch = selectedTheme === 'all' || quote.theme.toLowerCase() === selectedTheme;
+
+                // Search Match Check
+                const searchMatch = !searchTerm ||
+                    quote.text.toLowerCase().includes(searchTerm) ||
+                    quote.source.toLowerCase().includes(searchTerm) ||
+                    quote.theme.toLowerCase().includes(searchTerm); // Search includes theme now
+
+                return themeMatch && searchMatch;
+            });
+
+            // Reset the index and update the count
+            lastQuoteIndex = -1;
+            availableCountElement.textContent = currentFilteredQuotes.length;
+            newQuoteButton.disabled = currentFilteredQuotes.length <= 1; // Disable if 0 or 1 quote found
+
+            // Immediately show the result of the filtering
+            displayNewQuote(true);
+        }
+
+        // --- DISPLAY LOGIC ---
+
+        /**
+         * Fetches the next quote from the filtered list (cycling through them).
+         * @returns {object|null} The quote object, or null if no quotes are available.
+         */
+        function getNextFilteredQuote() {
+            if (currentFilteredQuotes.length === 0) {
+                return null;
+            }
+
+            // Cycle through the filtered array
+            lastQuoteIndex = (lastQuoteIndex + 1) % currentFilteredQuotes.length;
+            return currentFilteredQuotes[lastQuoteIndex];
+        }
+
+        /**
+         * Fetches a new quote, updates the UI, and applies a fade effect.
+         * @param {boolean} isInitialLoad - true if called after a filter/search update.
+         */
+        function displayNewQuote(isInitialLoad = false) {
+            // 1. Start fade-out effect, but skip if it's the very first load
+            if (!isInitialLoad) {
+                quoteCard.classList.add('fade-out');
+            }
+
+            // 2. Set timeout for content change, or run immediately if initial load
+            setTimeout(() => {
+                const quote = getNextFilteredQuote();
+
+                // Clear previous classes
+                quoteTextElement.classList.remove('warning-text', 'text-xl', 'text-2xl', 'italic');
+                
+                if (quote) {
+                    // 3. Update the content
+                    quoteTextElement.textContent = `"${quote.text}"`;
+                    quoteSourceElement.textContent = `— ${quote.source} (Theme: ${quote.theme})`;
+                    quoteTextElement.classList.add('text-2xl', 'italic');
+                    
+                } else {
+                    // Display message if no quotes match the filter/search
+                    quoteTextElement.textContent = "No quotes found matching your criteria. Try adjusting the theme or clearing the search box.";
+                    quoteSourceElement.textContent = "— Literary Insight Engine";
+                    quoteTextElement.classList.add('warning-text', 'text-xl');
+                }
+
+                // 4. Remove fade-out class (starts fade-in)
+                quoteCard.classList.remove('fade-out');
+            }, isInitialLoad ? 0 : 500); // Match this timeout to the CSS transition duration
+        }
+
+        // --- MODAL AND FORM LOGIC ---
+
+        function openModal() {
+            addQuoteModal.classList.remove('hidden');
+            statusMessage.classList.add('hidden');
+        }
+
+        function closeModal() {
+            addQuoteModal.classList.add('hidden');
+            quoteForm.reset();
+        }
+
+        /**
+         * Displays a temporary status message inside the modal.
+         * @param {string} message - The message to display.
+         * @param {string} color - The Tailwind color class (e.g., 'green-success', 'deep-red').
+         */
+        function showStatusMessage(message, color) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-4 text-center text-md font-medium text-${color}`;
+            statusMessage.classList.remove('hidden');
+
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 3000);
+        }
+
+        /**
+         * Handles the submission of a new quote.
+         */
+        function handleQuoteSubmit(event) {
+            event.preventDefault();
+
+            const quoteText = document.getElementById('quote-input').value.trim();
+            const source = document.getElementById('source-input').value.trim();
+            const theme = document.getElementById('theme-submit-input').value.trim();
+
+            if (!quoteText || !source || !theme) {
+                showStatusMessage("Please fill in all required fields.", 'deep-red');
+                return;
+            }
+
+            const newQuote = {
+                text: quoteText,
+                source: source,
+                theme: theme.charAt(0).toUpperCase() + theme.slice(1).toLowerCase(), // Capitalize theme
+                user: true // Flag to identify user-added quotes
+            };
+
+            saveUserQuote(newQuote);
+            
+            // Re-initialize UI components with the new full list
+            populateThemeFilter();
+            filterQuotes();
+
+            showStatusMessage("Quote submitted and saved successfully!", 'green-success');
+            
+            // Optionally close the modal after a short delay
+            setTimeout(() => {
+                closeModal();
+            }, 500);
+        }
+
+
+        // --- INITIALIZATION ---
+
+        // Event Listeners: Attach filtering, quote display, and modal logic
+        newQuoteButton.addEventListener('click', () => displayNewQuote(false));
+        themeFilter.addEventListener('change', filterQuotes);
+        searchInput.addEventListener('input', filterQuotes);
+        
+        addQuoteButton.addEventListener('click', openModal);
+        closeModalButton.addEventListener('click', closeModal);
+        quoteForm.addEventListener('submit', handleQuoteSubmit);
+        
+        // Close modal on backdrop click
+        addQuoteModal.addEventListener('click', (e) => {
+            if (e.target.id === 'add-quote-modal') {
+                closeModal();
+            }
+        });
+
+
+        // Initial setup on page load
+        window.onload = () => {
+             // 1. Load quotes from local storage
+            loadUserQuotes();
+             // 2. Populate the theme dropdown based on the combined list
+            populateThemeFilter();
+             // 3. Run the initial filter to load all quotes
+            filterQuotes();
+        };
+
+    </script>
+
+</body>
+</html>
